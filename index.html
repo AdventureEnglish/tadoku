@@ -82,6 +82,11 @@
   .words .n{font-size:23px; font-weight:800; line-height:1}
   .words .u{font-size:10px; opacity:.92; letter-spacing:.04em; margin-top:2px}
   .empty{text-align:center; color:var(--muted); font-size:14px; padding:26px 10px}
+  .notfound{text-align:center; padding:22px 14px 6px; background:var(--card);
+    border:2px dashed var(--line); border-radius:16px}
+  .notfound .nf-emoji{font-size:42px; line-height:1}
+  .notfound .nf-title{font-size:17px; font-weight:800; color:var(--ink); margin-top:8px}
+  .notfound .nf-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.7}
   /* ---- detail popup ---- */
   .detail{position:fixed; inset:0; background:rgba(40,30,10,.5); display:none;
     align-items:center; justify-content:center; padding:20px; z-index:50}
@@ -313,8 +318,9 @@ function scoreBook(b, qNorm, qTok, qBg, qHas, qSig){
     if(qh>0) hard=true;
     s += (qh/qSig.length)*0.4;
   }
-  // (3) whole title contained inside the (noisy) query text — strong signal from OCR
-  if(b._n.length>=4 && qNorm.includes(b._n)){ s += 1.2 + Math.min(b._n.length/40,0.6); hard=true; }
+  // (3) whole title contained inside the (noisy) query text, on word boundaries — strong OCR signal
+  //     (padding avoids "ours" matching inside "hours")
+  if(b._n.length>=4 && (' '+qNorm+' ').includes(' '+b._n+' ')){ s += 1.2 + Math.min(b._n.length/40,0.6); hard=true; }
   // (4) query contained inside title — partial typed search (e.g. "zoo" -> "Zookeeper")
   if(qNorm.length>=2 && b._n.includes(qNorm)){ s += 1.0 + Math.min(qNorm.length/b._n.length,1)*0.5; hard=true; }
   // (5) character-bigram similarity — tolerant of misspellings / OCR slips
@@ -538,13 +544,33 @@ async function runOcrOnCrop(){
   }finally{ curImg=null; }
 }
 
+const FOUND_T=1.2, MAYBE_T=0.7;
 function handleOcrText(text){
   const clean=text.replace(/\s+/g,' ').trim();
   ocrReadEl.style.display='block';
-  ocrReadEl.innerHTML = clean ? `読み取った文字: <b>${escapeHtml(clean.slice(0,120))}</b>` : '文字を読み取れませんでした。';
-  if(!clean){ showResults([],null); return; }
+  ocrReadEl.innerHTML = clean ? `読み取った文字: <b>${escapeHtml(clean.slice(0,120))}</b>` : '';
+  if(!clean){ renderNotFound('文字をうまく読み取れませんでした。'); return; }
   const candidates=rank(clean,6,'ocr');
-  showResults(candidates, 'この本かな? タップして確認 👇');
+  const best=candidates.length ? candidates[0][0] : 0;
+  if(best>=FOUND_T){
+    showResults(candidates, 'この本かな? タップして確認 👇');
+  }else{
+    renderNotFound(null, candidates.filter(([s])=>s>=MAYBE_T).slice(0,3));
+  }
+}
+function renderNotFound(msg, maybe){
+  resultsEl.innerHTML =
+    `<div class="notfound"><div class="nf-emoji">📕</div>
+       <div class="nf-title">この本はリストにないみたいです</div>
+       <div class="nf-sub">${msg?escapeHtml(msg)+'<br>':''}タイトルをもう一度枠で囲んで撮り直すか、上の検索でも探してみてね。</div>
+     </div>`;
+  if(maybe && maybe.length){
+    let m='<div class="section-label" style="margin-top:18px">もしかして…（自信は低めです）</div>';
+    maybe.forEach(([s,b])=> m+=cardHTML(b,false));
+    resultsEl.insertAdjacentHTML('beforeend', m);
+    resultsEl.querySelectorAll('.card').forEach(c=>
+      c.addEventListener('click',()=>openDetail(parseInt(c.dataset.id,10))));
+  }
 }
 </script>
 </body>
