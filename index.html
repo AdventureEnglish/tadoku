@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1f7a5a">
+<title>多読 語数チェッカー</title>
+<style>
+  :root{
+    --green:#1f7a5a; --green-d:#155e44; --bg:#f4f7f5; --card:#ffffff;
+    --ink:#1d2a24; --muted:#6b7b73; --line:#e2eae6; --accent:#ffb703;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;}
+  header{background:var(--green); color:#fff; padding:14px 16px; text-align:center;
+    position:sticky; top:0; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  header h1{margin:0; font-size:18px; font-weight:700; letter-spacing:.02em}
+  header p{margin:2px 0 0; font-size:12px; opacity:.9}
+  .wrap{max-width:560px; margin:0 auto; padding:16px}
+  .photo-btn{display:flex; align-items:center; justify-content:center; gap:10px;
+    width:100%; padding:20px; font-size:20px; font-weight:700; color:#fff;
+    background:var(--green); border:none; border-radius:16px; cursor:pointer;
+    box-shadow:0 4px 14px rgba(31,122,90,.3);}
+  .photo-btn:active{transform:translateY(1px); background:var(--green-d)}
+  .photo-btn .emoji{font-size:26px}
+  .hint{font-size:12px; color:var(--muted); text-align:center; margin:10px 4px 18px}
+  .searchbox{position:relative; margin-bottom:14px}
+  .searchbox input{width:100%; padding:14px 14px 14px 44px; font-size:16px;
+    border:2px solid var(--line); border-radius:12px; background:var(--card); outline:none}
+  .searchbox input:focus{border-color:var(--green)}
+  .searchbox .ico{position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:18px; opacity:.5}
+  #status{display:none; background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px; margin-bottom:14px; text-align:center; font-size:14px; color:var(--muted)}
+  #status.show{display:block}
+  .bar{height:8px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:10px}
+  .bar > i{display:block; height:100%; width:0%; background:var(--green); transition:width .2s}
+  .ocr-read{font-size:13px; color:var(--muted); background:var(--bg); border-radius:8px;
+    padding:8px 10px; margin-bottom:12px; word-break:break-word}
+  .ocr-read b{color:var(--ink)}
+  .section-label{font-size:13px; color:var(--muted); margin:4px 2px 10px; font-weight:700}
+  .card{display:flex; align-items:center; gap:12px; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:10px;
+    cursor:pointer; transition:box-shadow .15s, transform .05s}
+  .card:active{transform:scale(.99)}
+  .card.best{border-color:var(--green); box-shadow:0 3px 12px rgba(31,122,90,.15)}
+  .card .main{flex:1; min-width:0}
+  .card .title{font-size:16px; font-weight:700; line-height:1.3}
+  .card .meta{font-size:12px; color:var(--muted); margin-top:3px}
+  .lvl{display:inline-block; background:#eaf4ef; color:var(--green-d); font-weight:700;
+    font-size:11px; padding:2px 8px; border-radius:99px; margin-right:6px}
+  .words{flex-shrink:0; text-align:center; min-width:78px;
+    background:var(--green); color:#fff; border-radius:12px; padding:8px 6px}
+  .words .n{font-size:22px; font-weight:800; line-height:1}
+  .words .u{font-size:10px; opacity:.9; letter-spacing:.04em}
+  .empty{text-align:center; color:var(--muted); font-size:14px; padding:24px 10px}
+  .detail{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none;
+    align-items:center; justify-content:center; padding:20px; z-index:50}
+  .detail.show{display:flex}
+  .detail .box{background:#fff; border-radius:18px; padding:24px; text-align:center; max-width:340px; width:100%}
+  .detail .dt{font-size:20px; font-weight:800; margin-bottom:14px}
+  .detail .big{font-size:52px; font-weight:800; color:var(--green); line-height:1}
+  .detail .big small{font-size:18px; color:var(--muted); font-weight:700; margin-left:4px}
+  .detail .lv2{margin-top:10px; font-size:15px; color:var(--muted)}
+  .detail button{margin-top:20px; width:100%; padding:14px; font-size:16px; font-weight:700;
+    border:none; border-radius:12px; background:var(--green); color:#fff; cursor:pointer}
+  footer{text-align:center; font-size:11px; color:var(--muted); padding:18px}
+  canvas{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 多読 語数チェッカー</h1>
+  <p>本の表紙を撮るか、タイトルで検索しよう</p>
+</header>
+
+<div class="wrap">
+  <button class="photo-btn" id="photoBtn">
+    <span class="emoji">📷</span> 本の表紙を撮る
+  </button>
+  <input type="file" id="fileIn" accept="image/*" capture="environment" style="display:none">
+  <div class="hint">英語のタイトルがはっきり写るように撮ってね</div>
+
+  <div class="searchbox">
+    <span class="ico">🔍</span>
+    <input type="text" id="search" placeholder="タイトルで検索 (例: zoo race)" autocomplete="off">
+  </div>
+
+  <div id="status">
+    <div id="statusText">読み取り中...</div>
+    <div class="bar"><i id="bar"></i></div>
+  </div>
+
+  <div id="ocrRead" class="ocr-read" style="display:none"></div>
+  <div id="results"></div>
+</div>
+
+<div class="detail" id="detail">
+  <div class="box">
+    <div class="dt" id="dTitle"></div>
+    <div class="big"><span id="dWords"></span><small>語</small></div>
+    <div class="lv2" id="dLevel"></div>
+    <button id="dClose">とじる</button>
+  </div>
+</div>
+
+<footer>多読語数一覧2024.07 ／ 全<span id="bookCount"></span>冊</footer>
+
+<canvas id="canvas"></canvas>
+<script src="books.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const BOOKS = window.BOOKS || [];
+document.getElementById('bookCount').textContent = BOOKS.length.toLocaleString();
+
+// ---- normalization & precompute ----
+function norm(s){
+  return (s||'').toLowerCase()
+    .replace(/[''`]/g,"'")
+    .replace(/[^a-z0-9' ]+/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+const STOP = new Set(['the','a','an','of','and','to','in','for','on','is','it','at','with','my','his','her','this','that']);
+function tokens(s){ return norm(s).split(' ').filter(w=>w.length>0); }
+function bigrams(s){
+  s=norm(s).replace(/ /g,'');
+  const g=new Set(); for(let i=0;i<s.length-1;i++) g.add(s.slice(i,i+2));
+  return g;
+}
+function sig(toks){ return toks.filter(w=>!STOP.has(w) && w.length>=2); }
+BOOKS.forEach((b,i)=>{ b.id=i; b._n=norm(b.t); b._tok=tokens(b.t); b._sig=sig(b._tok); b._tset=new Set(b._tok); b._bg=bigrams(b.t); });
+
+function diceSim(aSet,bSet){
+  if(aSet.size===0||bSet.size===0) return 0;
+  let inter=0; for(const x of aSet) if(bSet.has(x)) inter++;
+  return (2*inter)/(aSet.size+bSet.size);
+}
+
+// Score a book against a query. Returns [score, hard] where `hard` means a real
+// word/substring overlap (not just fuzzy letter-pair similarity).
+function scoreBook(b, qNorm, qTok, qBg, qHas, qSig){
+  if(!qNorm) return [0,false];
+  if(b._n===qNorm) return [5,true];
+  let s=0, hard=false;
+  // (1) title coverage: how many of the title's meaningful words appear in the query
+  if(b._sig.length){
+    let cov=0; for(const w of b._sig) if(qHas.has(w)) cov++;
+    if(cov>0) hard=true;
+    s += (cov/b._sig.length)*1.4;
+  }
+  // (2) query precision: how many meaningful query words land in the title (lightly weighted; OCR has noise)
+  if(qSig.length){
+    let qh=0; for(const w of qSig) if(b._tset.has(w)) qh++;
+    if(qh>0) hard=true;
+    s += (qh/qSig.length)*0.4;
+  }
+  // (3) whole title contained inside the (noisy) query text — strong signal from OCR
+  if(b._n.length>=4 && qNorm.includes(b._n)){ s += 1.2 + Math.min(b._n.length/40,0.6); hard=true; }
+  // (4) query contained inside title — partial typed search (e.g. "zoo" -> "Zookeeper")
+  if(qNorm.length>=2 && b._n.includes(qNorm)){ s += 1.0 + Math.min(qNorm.length/b._n.length,1)*0.5; hard=true; }
+  // (5) character-bigram similarity — tolerant of misspellings / OCR slips
+  s += diceSim(qBg, b._bg)*0.5;
+  return [s,hard];
+}
+
+// mode: 'search' = only real (hard) matches; 'ocr' = also keep fuzzy matches for typos.
+function rank(query, limit, mode){
+  const qNorm=norm(query), qTok=tokens(query), qBg=bigrams(query);
+  const qHas=new Set(qTok), qSig=sig(qTok);
+  const scored=[];
+  for(const b of BOOKS){
+    const [sc,hard]=scoreBook(b,qNorm,qTok,qBg,qHas,qSig);
+    if(mode==='ocr'){ if(sc>0.12) scored.push([sc,b]); }
+    else { if(hard) scored.push([sc,b]); }
+  }
+  scored.sort((x,y)=> y[0]-x[0] || x[1].w-y[1].w);
+  return scored.slice(0,limit);
+}
+
+// ---- rendering ----
+const resultsEl=document.getElementById('results');
+function cardHTML(b, best){
+  const lvl = (b.l==='Phonics'||isNaN(parseInt(b.l))) ? b.l : 'Lv '+b.l;
+  return `<div class="card${best?' best':''}" data-id="${b.id}">
+    <div class="main">
+      <div class="title">${escapeHtml(b.t)}</div>
+      <div class="meta"><span class="lvl">${escapeHtml(lvl)}</span></div>
+    </div>
+    <div class="words"><div class="n">${b.w.toLocaleString()}</div><div class="u">語 WORDS</div></div>
+  </div>`;
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function showResults(list, label){
+  if(!list.length){ resultsEl.innerHTML='<div class="empty">見つかりませんでした。<br>スペルを変えて検索するか、もう一度撮ってみてね。</div>'; return; }
+  let html = label?`<div class="section-label">${label}</div>`:'';
+  list.forEach(([sc,b],i)=> html+=cardHTML(b, i===0&&!!label));
+  resultsEl.innerHTML=html;
+  resultsEl.querySelectorAll('.card').forEach(c=>{
+    c.addEventListener('click',()=>openDetail(parseInt(c.dataset.id,10)));
+  });
+}
+
+// ---- detail popup ----
+function openDetail(id){
+  const b=BOOKS[id]; if(!b) return;
+  document.getElementById('dTitle').textContent=b.t;
+  document.getElementById('dWords').textContent=b.w.toLocaleString();
+  const lvl=(b.l==='Phonics'||isNaN(parseInt(b.l)))?b.l:'レベル '+b.l;
+  document.getElementById('dLevel').textContent=lvl;
+  document.getElementById('detail').classList.add('show');
+}
+document.getElementById('dClose').onclick=()=>document.getElementById('detail').classList.remove('show');
+document.getElementById('detail').onclick=e=>{ if(e.target.id==='detail') e.target.classList.remove('show'); };
+
+// ---- search ----
+const searchEl=document.getElementById('search');
+let tSearch;
+searchEl.addEventListener('input',()=>{
+  clearTimeout(tSearch);
+  tSearch=setTimeout(()=>{
+    const q=searchEl.value.trim();
+    document.getElementById('ocrRead').style.display='none';
+    if(q.length===0){ resultsEl.innerHTML=''; return; }
+    showResults(rank(q,60,'search'), null);
+  },120);
+});
+
+// ---- camera + OCR ----
+const photoBtn=document.getElementById('photoBtn');
+const fileIn=document.getElementById('fileIn');
+const statusEl=document.getElementById('status');
+const statusText=document.getElementById('statusText');
+const barEl=document.getElementById('bar');
+const ocrReadEl=document.getElementById('ocrRead');
+
+photoBtn.onclick=()=>fileIn.click();
+fileIn.onchange=async()=>{
+  const file=fileIn.files[0]; if(!file) return;
+  fileIn.value='';
+  resultsEl.innerHTML=''; ocrReadEl.style.display='none';
+  searchEl.value='';
+  statusEl.classList.add('show'); statusText.textContent='画像を準備中...'; barEl.style.width='5%';
+  try{
+    const img=await loadImage(file);
+    const canvasUrl=preprocess(img);
+    statusText.textContent='表紙の文字を読み取り中...';
+    const {data}=await Tesseract.recognize(canvasUrl,'eng',{
+      logger:m=>{ if(m.status==='recognizing text'){ barEl.style.width=(20+m.progress*75)+'%'; } }
+    });
+    barEl.style.width='100%';
+    const text=(data.text||'').trim();
+    statusEl.classList.remove('show');
+    handleOcrText(text);
+  }catch(err){
+    statusEl.classList.remove('show');
+    resultsEl.innerHTML='<div class="empty">読み取りに失敗しました。明るい場所でタイトルが大きく写るように撮ってみてね。</div>';
+    console.error(err);
+  }
+};
+
+function loadImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>res(img); img.onerror=rej;
+    img.src=URL.createObjectURL(file);
+  });
+}
+// downscale + grayscale + contrast for better OCR
+function preprocess(img){
+  const canvas=document.getElementById('canvas');
+  const maxW=1280;
+  let w=img.width, h=img.height;
+  if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(img,0,0,w,h);
+  const id=ctx.getImageData(0,0,w,h); const d=id.data;
+  const contrast=1.35, intercept=128*(1-contrast);
+  for(let i=0;i<d.length;i+=4){
+    let g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+    g=g*contrast+intercept;
+    g=g<0?0:g>255?255:g;
+    d[i]=d[i+1]=d[i+2]=g;
+  }
+  ctx.putImageData(id,0,0);
+  return canvas.toDataURL('image/png');
+}
+
+function handleOcrText(text){
+  const clean=text.replace(/\s+/g,' ').trim();
+  ocrReadEl.style.display='block';
+  ocrReadEl.innerHTML = clean ? `読み取った文字: <b>${escapeHtml(clean.slice(0,120))}</b>` : '文字を読み取れませんでした。';
+  if(!clean){ showResults([],null); return; }
+  const candidates=rank(clean,6,'ocr');
+  showResults(candidates, 'この本かな? タップして確認 👇');
+}
+</script>
+</body>
+</html>
