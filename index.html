@@ -457,17 +457,21 @@ let curImg=null, imgRect=null, lastImg=null;
 
 function openCrop(img){
   curImg=img; lastImg=img;
-  cropImg.src=img.src;
   cropEl.classList.add('show');
-  // wait for layout, then place a default box. For Highlights covers the title sits
-  // just below the red "Highlights" logo, so start the box there when we can find it.
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  cropBox.style.visibility='hidden';   // hide until we can measure the rendered image
+  // Place the default box only AFTER the image has actually rendered, otherwise on a
+  // big uploaded photo we'd measure a 0-size rect and the crop would grab the wrong area.
+  const place=()=>{
     imgRect=relRect();
-    const det=detectTitleTop(img);
+    if(!imgRect.w || !imgRect.h){ requestAnimationFrame(place); return; }
+    const det=detectTitleTop(img);                       // bottom of red Highlights logo
     const topF = det!=null ? Math.min(det+0.015, 0.5) : 0.12;
-    const w=imgRect.w*0.88, h=Math.max(imgRect.h*0.19, 60);
-    setBox(imgRect.x+imgRect.w*0.06, imgRect.y+imgRect.h*topF, w, h);
-  }));
+    setBox(imgRect.x+imgRect.w*0.06, imgRect.y+imgRect.h*topF, imgRect.w*0.88, Math.max(imgRect.h*0.19,60));
+    cropBox.style.visibility='visible';
+  };
+  cropImg.onload=()=>requestAnimationFrame(place);
+  cropImg.src=img.src;
+  if(cropImg.complete && cropImg.naturalWidth) requestAnimationFrame(place);  // already cached
 }
 // Find the bottom of the red "Highlights" logo (upper area) -> returns y as fraction, or null.
 function detectTitleTop(img){
@@ -546,44 +550,56 @@ async function getWorker(){
   return ocrWorker;
 }
 
-// crop -> binarize (auto invert for white-on-dark titles) -> OCR
-function makeOcrCanvas(){
+// crop the framed region (upscaled) and return a processed canvas.
+// mode 'bin'  = Otsu binarize, auto-invert for white-on-dark titles
+// mode 'gray' = grayscale + contrast stretch (gentler fallback for tricky covers)
+function makeOcrCanvas(mode){
   const nat={w:curImg.naturalWidth, h:curImg.naturalHeight};
   const fx=(box.x-imgRect.x)/imgRect.w, fy=(box.y-imgRect.y)/imgRect.h;
   const fw=box.w/imgRect.w, fh=box.h/imgRect.h;
   let sx=fx*nat.w, sy=fy*nat.h, sw=fw*nat.w, sh=fh*nat.h;
-  // upscale small crops so text is big enough for OCR
   const target=1100; let scale=sw<target?target/sw:1; scale=Math.min(scale,3.5);
   const c=document.getElementById('canvas');
   c.width=Math.round(sw*scale); c.height=Math.round(sh*scale);
   const ctx=c.getContext('2d'); ctx.imageSmoothingQuality='high';
   ctx.drawImage(curImg, sx,sy,sw,sh, 0,0,c.width,c.height);
-  // grayscale + Otsu threshold
   const id=ctx.getImageData(0,0,c.width,c.height), d=id.data;
-  const hist=new Array(256).fill(0); const g=new Uint8Array(d.length/4);
-  for(let i=0,j=0;i<d.length;i+=4,j++){ const v=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])|0; g[j]=v; hist[v]++; }
-  const total=g.length; let sum=0; for(let t=0;t<256;t++) sum+=t*hist[t];
-  let sumB=0,wB=0,maxVar=-1,thr=127;
-  for(let t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
-    sumB+=t*hist[t]; const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>maxVar){maxVar=v;thr=t;} }
-  let dark=0; for(let j=0;j<total;j++) if(g[j]<thr) dark++;
-  const invert = dark > total*0.5; // background is dark => white text => invert to dark-on-white
-  for(let i=0,j=0;i<d.length;i+=4,j++){ let v=g[j]<thr?0:255; if(invert) v=255-v; d[i]=d[i+1]=d[i+2]=v; }
+  const total=d.length/4; const g=new Uint8Array(total);
+  let mn=255,mx=0;
+  for(let i=0,j=0;i<d.length;i+=4,j++){ const v=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])|0; g[j]=v; if(v<mn)mn=v; if(v>mx)mx=v; }
+  if(mode==='gray'){
+    const range=Math.max(1,mx-mn);
+    for(let i=0,j=0;i<d.length;i+=4,j++){ const v=((g[j]-mn)*255/range)|0; d[i]=d[i+1]=d[i+2]=v; }
+  }else{
+    const hist=new Array(256).fill(0); for(let j=0;j<total;j++) hist[g[j]]++;
+    let sum=0; for(let t=0;t<256;t++) sum+=t*hist[t];
+    let sumB=0,wB=0,maxVar=-1,thr=127;
+    for(let t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+      sumB+=t*hist[t]; const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>maxVar){maxVar=v;thr=t;} }
+    let dark=0; for(let j=0;j<total;j++) if(g[j]<thr) dark++;
+    const invert = dark > total*0.5;  // mostly dark bg => white text => invert to dark-on-white
+    for(let i=0,j=0;i<d.length;i+=4,j++){ let v=g[j]<thr?0:255; if(invert) v=255-v; d[i]=d[i+1]=d[i+2]=v; }
+  }
   ctx.putImageData(id,0,0);
   return c;
 }
-
+const alnum=s=>(s||'').replace(/[^A-Za-z0-9]/g,'');
 async function runOcrOnCrop(){
   if(!curImg||!imgRect) return;
   resultsEl.innerHTML=''; ocrReadEl.style.display='none'; searchEl.value='';
   statusEl.classList.add('show'); statusText.textContent='タイトルを読み取り中...'; barEl.style.width='10%';
   try{
-    const canvas=makeOcrCanvas();
     const worker=await getWorker();
-    const {data}=await worker.recognize(canvas);
+    let r=await worker.recognize(makeOcrCanvas('bin'));
+    let text=(r.data.text||'').trim();
+    // if binarization produced little/garbage, retry with a gentler grayscale pass
+    if(alnum(text).length<3){
+      const r2=await worker.recognize(makeOcrCanvas('gray'));
+      if(alnum(r2.data.text).length>alnum(text).length) text=(r2.data.text||'').trim();
+    }
     barEl.style.width='100%';
     statusEl.classList.remove('show');
-    handleOcrText(data.text||'');
+    handleOcrText(text);
   }catch(err){
     statusEl.classList.remove('show');
     resultsEl.innerHTML='<div class="empty">読み取りに失敗しました。明るい場所で、タイトルだけを枠で囲んでもう一度試してね。</div>';
