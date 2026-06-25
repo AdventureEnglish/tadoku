@@ -70,8 +70,6 @@
     cursor:pointer; transition:box-shadow .15s, transform .05s, border-color .15s}
   .card:active{transform:scale(.99)}
   .card.best{border-color:var(--orange); box-shadow:0 4px 14px rgba(239,159,44,.22); background:#fffdf2}
-  .card.best::before{content:"これかな?"; position:absolute; margin-top:-26px; margin-left:-2px;
-    background:var(--orange); color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:99px}
   .card{position:relative}
   .card .main{flex:1; min-width:0}
   .card .title{font-size:16px; font-weight:800; line-height:1.3; color:var(--ink)}
@@ -103,6 +101,24 @@
   footer{text-align:center; font-size:11px; color:var(--muted); padding:20px 16px 28px; line-height:1.7}
   footer .fbrand{font-weight:800; color:var(--green-d)}
   footer svg{width:18px;height:18px;vertical-align:-4px;opacity:.8;margin:0 2px}
+  /* ---- crop screen ---- */
+  .crop{position:fixed; inset:0; background:#1c211e; display:none; flex-direction:column; z-index:60}
+  .crop.show{display:flex}
+  .crop-stage{position:relative; flex:1; overflow:hidden; display:flex; align-items:center; justify-content:center; touch-action:none}
+  .crop-stage img{max-width:100%; max-height:100%; display:block; user-select:none; -webkit-user-drag:none}
+  .crop-box{position:absolute; border:2.5px solid #fff; border-radius:4px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.55); touch-action:none; cursor:move}
+  .crop-box .grip{position:absolute; width:30px; height:30px; background:var(--yellow);
+    border:3px solid #fff; border-radius:50%; touch-action:none}
+  .crop-box .grip.se{right:-16px; bottom:-16px; cursor:nwse-resize}
+  .crop-box .grip.nw{left:-16px; top:-16px; cursor:nwse-resize}
+  .crop-tip{position:absolute; top:14px; left:0; right:0; text-align:center; color:#fff;
+    font-size:14px; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,.7); pointer-events:none; z-index:2}
+  .crop-bar{display:flex; gap:12px; padding:14px 16px calc(14px + env(safe-area-inset-bottom)); background:#1c211e}
+  .crop-bar button{flex:1; padding:15px; font-size:16px; font-weight:800; border:none; border-radius:14px; cursor:pointer}
+  .crop-bar .cancel{background:#3a423d; color:#fff}
+  .crop-bar .ok{background:linear-gradient(180deg,var(--yellow),var(--orange)); color:#fff; box-shadow:0 3px 0 var(--orange-d)}
+  .crop-bar .ok:active{transform:translateY(2px); box-shadow:0 1px 0 var(--orange-d)}
   canvas{display:none}
 </style>
 </head>
@@ -217,6 +233,20 @@
 
   <div id="ocrRead" class="ocr-read" style="display:none"></div>
   <div id="results"></div>
+</div>
+
+<div class="crop" id="crop">
+  <div class="crop-stage" id="cropStage">
+    <div class="crop-tip">タイトル（いちばん大きい文字）を枠で囲んでね ✂️</div>
+    <img id="cropImg" alt="">
+    <div class="crop-box" id="cropBox">
+      <span class="grip nw"></span><span class="grip se"></span>
+    </div>
+  </div>
+  <div class="crop-bar">
+    <button class="cancel" id="cropCancel">撮り直す</button>
+    <button class="ok" id="cropOk">この枠で読み取る</button>
+  </div>
 </div>
 
 <div class="detail" id="detail">
@@ -367,24 +397,12 @@ photoBtn.onclick=()=>fileIn.click();
 fileIn.onchange=async()=>{
   const file=fileIn.files[0]; if(!file) return;
   fileIn.value='';
-  resultsEl.innerHTML=''; ocrReadEl.style.display='none';
-  searchEl.value='';
-  statusEl.classList.add('show'); statusText.textContent='画像を準備中...'; barEl.style.width='5%';
   try{
     const img=await loadImage(file);
-    const canvasUrl=preprocess(img);
-    statusText.textContent='表紙の文字を読み取り中...';
-    const {data}=await Tesseract.recognize(canvasUrl,'eng',{
-      logger:m=>{ if(m.status==='recognizing text'){ barEl.style.width=(20+m.progress*75)+'%'; } }
-    });
-    barEl.style.width='100%';
-    const text=(data.text||'').trim();
-    statusEl.classList.remove('show');
-    handleOcrText(text);
+    openCrop(img);
   }catch(err){
-    statusEl.classList.remove('show');
-    resultsEl.innerHTML='<div class="empty">読み取りに失敗しました。明るい場所でタイトルが大きく写るように撮ってみてね。</div>';
     console.error(err);
+    resultsEl.innerHTML='<div class="empty">画像を読み込めませんでした。もう一度試してね。</div>';
   }
 };
 
@@ -392,28 +410,132 @@ function loadImage(file){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.onload=()=>res(img); img.onerror=rej;
-    img.src=URL.createObjectURL(file);
+    img.src=(typeof file==='string')?file:URL.createObjectURL(file);
   });
 }
-// downscale + grayscale + contrast for better OCR
-function preprocess(img){
-  const canvas=document.getElementById('canvas');
-  const maxW=1280;
-  let w=img.width, h=img.height;
-  if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
-  canvas.width=w; canvas.height=h;
-  const ctx=canvas.getContext('2d');
-  ctx.drawImage(img,0,0,w,h);
-  const id=ctx.getImageData(0,0,w,h); const d=id.data;
-  const contrast=1.35, intercept=128*(1-contrast);
-  for(let i=0;i<d.length;i+=4){
-    let g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
-    g=g*contrast+intercept;
-    g=g<0?0:g>255?255:g;
-    d[i]=d[i+1]=d[i+2]=g;
+
+// ---- crop screen ----
+const cropEl=document.getElementById('crop');
+const cropStage=document.getElementById('cropStage');
+const cropImg=document.getElementById('cropImg');
+const cropBox=document.getElementById('cropBox');
+let curImg=null, imgRect=null;
+
+function openCrop(img){
+  curImg=img;
+  cropImg.src=img.src;
+  cropEl.classList.add('show');
+  // wait for layout, then place a default box over the upper-middle (where titles usually are)
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    imgRect=relRect();
+    const w=imgRect.w*0.82, h=Math.max(imgRect.h*0.20, 60);
+    setBox(imgRect.x+imgRect.w*0.09, imgRect.y+imgRect.h*0.12, w, h);
+  }));
+}
+function relRect(){
+  const s=cropStage.getBoundingClientRect(), r=cropImg.getBoundingClientRect();
+  return {x:r.left-s.left, y:r.top-s.top, w:r.width, h:r.height};
+}
+let box={x:0,y:0,w:0,h:0};
+function setBox(x,y,w,h){
+  // clamp inside image
+  w=Math.max(40,w); h=Math.max(30,h);
+  if(imgRect){
+    w=Math.min(w,imgRect.w); h=Math.min(h,imgRect.h);
+    x=Math.min(Math.max(x,imgRect.x), imgRect.x+imgRect.w-w);
+    y=Math.min(Math.max(y,imgRect.y), imgRect.y+imgRect.h-h);
   }
+  box={x,y,w,h};
+  cropBox.style.left=x+'px'; cropBox.style.top=y+'px';
+  cropBox.style.width=w+'px'; cropBox.style.height=h+'px';
+}
+// pointer drag (move whole box, or resize via grips)
+let drag=null;
+function onDown(e){
+  const t=e.target, p=pt(e);
+  if(t.classList.contains('grip')){
+    drag={mode:t.classList.contains('se')?'se':'nw', sx:p.x, sy:p.y, ...box};
+  }else{
+    drag={mode:'move', sx:p.x, sy:p.y, ...box};
+  }
+  cropBox.setPointerCapture && cropBox.setPointerCapture(e.pointerId);
+  e.preventDefault();
+}
+function onMove(e){
+  if(!drag) return;
+  const p=pt(e), dx=p.x-drag.sx, dy=p.y-drag.sy;
+  if(drag.mode==='move'){ setBox(drag.x+dx, drag.y+dy, drag.w, drag.h); }
+  else if(drag.mode==='se'){ setBox(drag.x, drag.y, drag.w+dx, drag.h+dy); }
+  else if(drag.mode==='nw'){ setBox(drag.x+dx, drag.y+dy, drag.w-dx, drag.h-dy); }
+  e.preventDefault();
+}
+function onUp(){ drag=null; }
+function pt(e){ const s=cropStage.getBoundingClientRect(); return {x:e.clientX-s.left, y:e.clientY-s.top}; }
+cropBox.addEventListener('pointerdown',onDown);
+cropBox.addEventListener('pointermove',onMove);
+cropBox.addEventListener('pointerup',onUp);
+cropBox.addEventListener('pointercancel',onUp);
+
+document.getElementById('cropCancel').onclick=()=>{ cropEl.classList.remove('show'); curImg=null; };
+document.getElementById('cropOk').onclick=()=>{ cropEl.classList.remove('show'); runOcrOnCrop(); };
+
+// ---- OCR pipeline ----
+let ocrWorker=null;
+async function getWorker(){
+  if(ocrWorker) return ocrWorker;
+  ocrWorker=await Tesseract.createWorker('eng',1,{
+    logger:m=>{ if(m.status==='recognizing text'){ barEl.style.width=(25+m.progress*70)+'%'; } }
+  });
+  await ocrWorker.setParameters({
+    tessedit_pageseg_mode:'6',
+    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.,!?&:- "
+  });
+  return ocrWorker;
+}
+
+// crop -> binarize (auto invert for white-on-dark titles) -> OCR
+function makeOcrCanvas(){
+  const nat={w:curImg.naturalWidth, h:curImg.naturalHeight};
+  const fx=(box.x-imgRect.x)/imgRect.w, fy=(box.y-imgRect.y)/imgRect.h;
+  const fw=box.w/imgRect.w, fh=box.h/imgRect.h;
+  let sx=fx*nat.w, sy=fy*nat.h, sw=fw*nat.w, sh=fh*nat.h;
+  // upscale small crops so text is big enough for OCR
+  const target=1100; let scale=sw<target?target/sw:1; scale=Math.min(scale,3.5);
+  const c=document.getElementById('canvas');
+  c.width=Math.round(sw*scale); c.height=Math.round(sh*scale);
+  const ctx=c.getContext('2d'); ctx.imageSmoothingQuality='high';
+  ctx.drawImage(curImg, sx,sy,sw,sh, 0,0,c.width,c.height);
+  // grayscale + Otsu threshold
+  const id=ctx.getImageData(0,0,c.width,c.height), d=id.data;
+  const hist=new Array(256).fill(0); const g=new Uint8Array(d.length/4);
+  for(let i=0,j=0;i<d.length;i+=4,j++){ const v=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])|0; g[j]=v; hist[v]++; }
+  const total=g.length; let sum=0; for(let t=0;t<256;t++) sum+=t*hist[t];
+  let sumB=0,wB=0,maxVar=-1,thr=127;
+  for(let t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+    sumB+=t*hist[t]; const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>maxVar){maxVar=v;thr=t;} }
+  let dark=0; for(let j=0;j<total;j++) if(g[j]<thr) dark++;
+  const invert = dark > total*0.5; // background is dark => white text => invert to dark-on-white
+  for(let i=0,j=0;i<d.length;i+=4,j++){ let v=g[j]<thr?0:255; if(invert) v=255-v; d[i]=d[i+1]=d[i+2]=v; }
   ctx.putImageData(id,0,0);
-  return canvas.toDataURL('image/png');
+  return c;
+}
+
+async function runOcrOnCrop(){
+  if(!curImg||!imgRect) return;
+  resultsEl.innerHTML=''; ocrReadEl.style.display='none'; searchEl.value='';
+  statusEl.classList.add('show'); statusText.textContent='タイトルを読み取り中...'; barEl.style.width='10%';
+  try{
+    const canvas=makeOcrCanvas();
+    const worker=await getWorker();
+    const {data}=await worker.recognize(canvas);
+    barEl.style.width='100%';
+    statusEl.classList.remove('show');
+    handleOcrText(data.text||'');
+  }catch(err){
+    statusEl.classList.remove('show');
+    resultsEl.innerHTML='<div class="empty">読み取りに失敗しました。明るい場所で、タイトルだけを枠で囲んでもう一度試してね。</div>';
+    console.error(err);
+  }finally{ curImg=null; }
 }
 
 function handleOcrText(text){
