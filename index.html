@@ -93,7 +93,7 @@
   .notfound .nf-title{font-size:17px; font-weight:800; color:var(--ink); margin-top:8px}
   .notfound .nf-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.7}
   .notfound .nf-note{font-size:11px; color:#b3b9b3; margin-top:10px}
-  .back-btn{display:block; margin:16px auto 4px; padding:11px 22px; font-size:14px; font-weight:800;
+  .back-btn{display:block; margin:0 auto 14px; padding:11px 22px; font-size:14px; font-weight:800;
     color:#fff; background:linear-gradient(180deg,var(--teal),var(--teal-d)); border:none;
     border-radius:12px; cursor:pointer; box-shadow:0 3px 0 #184e69}
   .back-btn:active{transform:translateY(2px); box-shadow:0 1px 0 #184e69}
@@ -640,7 +640,7 @@ function appendBackButton(){
   btn.className='back-btn';
   btn.textContent='📷 さっきの画像にもどる';
   btn.onclick=()=>{ if(lastImg) openCrop(lastImg); };
-  resultsEl.appendChild(btn);
+  resultsEl.insertBefore(btn, resultsEl.firstChild);   // top, visible without scrolling
 }
 function renderNotFound(msg, maybe){
   resultsEl.innerHTML =
