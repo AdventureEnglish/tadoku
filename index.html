@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#4faa5a">
-<title>多読クラブ 語数チェッカー｜Adventure English</title>
+<title>ハイライツライブラリー語数チェッカー｜Adventure English</title>
 <style>
   :root{
     --green:#4faa5a; --green-d:#357a44;
@@ -49,6 +49,11 @@
     box-shadow:0 5px 0 var(--orange-d), 0 8px 16px rgba(212,133,27,.3); text-shadow:0 1px 1px rgba(0,0,0,.12)}
   .photo-btn:active{transform:translateY(3px); box-shadow:0 2px 0 var(--orange-d), 0 4px 10px rgba(212,133,27,.25)}
   .photo-btn svg{width:30px; height:30px; flex-shrink:0}
+  .upload-btn{display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+    margin-top:10px; padding:13px; font-size:15px; font-weight:800; color:var(--teal-d);
+    background:var(--card); border:2.5px solid var(--teal); border-radius:14px; cursor:pointer}
+  .upload-btn:active{background:#eef6fa}
+  .upload-btn svg{width:22px; height:22px; flex-shrink:0}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin:11px 4px 20px}
   .searchbox{position:relative; margin-bottom:16px}
   .searchbox input{width:100%; padding:14px 14px 14px 46px; font-size:16px;
@@ -88,6 +93,10 @@
   .notfound .nf-title{font-size:17px; font-weight:800; color:var(--ink); margin-top:8px}
   .notfound .nf-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.7}
   .notfound .nf-note{font-size:11px; color:#b3b9b3; margin-top:10px}
+  .notfound .nf-back{margin-top:16px; padding:11px 20px; font-size:14px; font-weight:800;
+    color:#fff; background:linear-gradient(180deg,var(--teal),var(--teal-d)); border:none;
+    border-radius:12px; cursor:pointer; box-shadow:0 3px 0 #184e69}
+  .notfound .nf-back:active{transform:translateY(2px); box-shadow:0 1px 0 #184e69}
   /* ---- detail popup ---- */
   .detail{position:fixed; inset:0; background:rgba(40,30,10,.5); display:none;
     align-items:center; justify-content:center; padding:20px; z-index:50}
@@ -99,7 +108,12 @@
   .detail .dt{font-size:20px; font-weight:800; margin-bottom:16px; color:var(--ink)}
   .detail .big{font-size:56px; font-weight:800; color:var(--teal); line-height:1}
   .detail .big small{font-size:18px; color:var(--muted); font-weight:800; margin-left:4px}
-  .detail .lv2{margin-top:12px; font-size:15px; color:var(--green-d); font-weight:700}
+  .detail .info{margin-top:16px; text-align:left}
+  .detail .irow{display:flex; justify-content:space-between; align-items:center; gap:12px;
+    padding:9px 4px; border-bottom:1px solid var(--line); font-size:15px}
+  .detail .irow:last-child{border-bottom:none}
+  .detail .irow .ik{color:var(--muted); font-weight:700; font-size:13px}
+  .detail .irow .iv{color:var(--ink); font-weight:800; text-align:right}
   .detail button{margin-top:22px; width:100%; padding:14px; font-size:16px; font-weight:800;
     border:none; border-radius:14px; background:linear-gradient(180deg,var(--green),var(--green-d)); color:#fff; cursor:pointer;
     box-shadow:0 3px 0 #2c6638}
@@ -197,6 +211,13 @@
     <circle cx="27" cy="27" r="16" fill="none" stroke="#2d83a6" stroke-width="6"/>
     <line x1="39" y1="39" x2="55" y2="55" stroke="#2d83a6" stroke-width="7" stroke-linecap="round"/>
   </symbol>
+  <symbol id="ico-upload" viewBox="0 0 64 64">
+    <rect x="10" y="40" width="44" height="14" rx="5" fill="#2d83a6"/>
+    <g stroke="#2d83a6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <line x1="32" y1="10" x2="32" y2="40"/>
+      <polyline points="20,24 32,11 44,24"/>
+    </g>
+  </symbol>
 </svg>
 
 <header class="hero">
@@ -212,7 +233,7 @@
     <div class="brand-fallback">Adventure English</div>
     <span class="club">多読クラブ</span>
   </div>
-  <h1 class="apptitle">📚 語数チェッカー</h1>
+  <h1 class="apptitle">📚 ハイライツライブラリー<br>語数チェッカー</h1>
   <div class="goal">⛵ 目指せ 100万語</div>
   <div class="subtitle">本の表紙を撮るか、タイトルで検索しよう</div>
   <svg class="hero-wave" viewBox="0 0 1200 22" preserveAspectRatio="none">
@@ -225,6 +246,10 @@
     <svg viewBox="0 0 64 64"><use href="#ico-cam"/></svg> 本の表紙を撮る
   </button>
   <input type="file" id="fileIn" accept="image/*" capture="environment" style="display:none">
+  <button class="upload-btn" id="uploadBtn">
+    <svg viewBox="0 0 64 64"><use href="#ico-upload"/></svg> 画像をアップロード
+  </button>
+  <input type="file" id="fileUp" accept="image/*" style="display:none">
   <div class="hint">英語のタイトルがはっきり大きく写るように撮ってね 📷</div>
 
   <div class="searchbox">
@@ -260,7 +285,7 @@
     <svg class="badge" viewBox="0 0 64 64"><use href="#ico-compass"/></svg>
     <div class="dt" id="dTitle"></div>
     <div class="big"><span id="dWords"></span><small>語</small></div>
-    <div class="lv2" id="dLevel"></div>
+    <div class="info" id="dInfo"></div>
     <button id="dClose">とじる</button>
   </div>
 </div>
@@ -373,7 +398,10 @@ function openDetail(id){
   document.getElementById('dTitle').textContent=b.t;
   document.getElementById('dWords').textContent=b.w.toLocaleString();
   const lvl=(b.l==='Phonics'||isNaN(parseInt(b.l)))?b.l:'レベル '+b.l;
-  document.getElementById('dLevel').textContent=lvl;
+  const rows=[['レベル',lvl],['Lexile',b.lex?b.lex+'L':null],['GRL',b.grl||null],['カテゴリー',b.cat||null]];
+  document.getElementById('dInfo').innerHTML = rows
+    .filter(r=>r[1])
+    .map(r=>`<div class="irow"><span class="ik">${r[0]}</span><span class="iv">${escapeHtml(r[1])}</span></div>`).join('');
   document.getElementById('detail').classList.add('show');
 }
 document.getElementById('dClose').onclick=()=>document.getElementById('detail').classList.remove('show');
@@ -400,18 +428,17 @@ const statusText=document.getElementById('statusText');
 const barEl=document.getElementById('bar');
 const ocrReadEl=document.getElementById('ocrRead');
 
+const fileUp=document.getElementById('fileUp');
+const uploadBtn=document.getElementById('uploadBtn');
 photoBtn.onclick=()=>fileIn.click();
-fileIn.onchange=async()=>{
-  const file=fileIn.files[0]; if(!file) return;
-  fileIn.value='';
-  try{
-    const img=await loadImage(file);
-    openCrop(img);
-  }catch(err){
-    console.error(err);
-    resultsEl.innerHTML='<div class="empty">画像を読み込めませんでした。もう一度試してね。</div>';
-  }
-};
+uploadBtn.onclick=()=>fileUp.click();
+async function handlePickedFile(file){
+  if(!file) return;
+  try{ openCrop(await loadImage(file)); }
+  catch(err){ console.error(err); resultsEl.innerHTML='<div class="empty">画像を読み込めませんでした。もう一度試してね。</div>'; }
+}
+fileIn.onchange=()=>{ const f=fileIn.files[0]; fileIn.value=''; handlePickedFile(f); };
+fileUp.onchange=()=>{ const f=fileUp.files[0]; fileUp.value=''; handlePickedFile(f); };
 
 function loadImage(file){
   return new Promise((res,rej)=>{
@@ -426,18 +453,37 @@ const cropEl=document.getElementById('crop');
 const cropStage=document.getElementById('cropStage');
 const cropImg=document.getElementById('cropImg');
 const cropBox=document.getElementById('cropBox');
-let curImg=null, imgRect=null;
+let curImg=null, imgRect=null, lastImg=null;
 
 function openCrop(img){
-  curImg=img;
+  curImg=img; lastImg=img;
   cropImg.src=img.src;
   cropEl.classList.add('show');
-  // wait for layout, then place a default box over the upper-middle (where titles usually are)
+  // wait for layout, then place a default box. For Highlights covers the title sits
+  // just below the red "Highlights" logo, so start the box there when we can find it.
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     imgRect=relRect();
-    const w=imgRect.w*0.82, h=Math.max(imgRect.h*0.20, 60);
-    setBox(imgRect.x+imgRect.w*0.09, imgRect.y+imgRect.h*0.12, w, h);
+    const det=detectTitleTop(img);
+    const topF = det!=null ? Math.min(det+0.015, 0.5) : 0.12;
+    const w=imgRect.w*0.88, h=Math.max(imgRect.h*0.19, 60);
+    setBox(imgRect.x+imgRect.w*0.06, imgRect.y+imgRect.h*topF, w, h);
   }));
+}
+// Find the bottom of the red "Highlights" logo (upper area) -> returns y as fraction, or null.
+function detectTitleTop(img){
+  try{
+    const cw=160, ch=Math.max(1,Math.round(img.naturalHeight*cw/img.naturalWidth));
+    const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+    const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cw,ch);
+    const d=ctx.getImageData(0,0,cw,ch).data;
+    const limitY=Math.floor(ch*0.45); let maxY=-1, cnt=0;
+    for(let y=0;y<limitY;y++) for(let x=0;x<cw;x++){
+      const i=(y*cw+x)*4, R=d[i],G=d[i+1],B=d[i+2];
+      if(R>120 && G<95 && B<95 && R-G>45 && R-B>40){ if(y>maxY)maxY=y; cnt++; }
+    }
+    if(cnt<15) return null;
+    return (maxY+1)/ch;
+  }catch(e){ return null; }
 }
 function relRect(){
   const s=cropStage.getBoundingClientRect(), r=cropImg.getBoundingClientRect();
@@ -546,12 +592,15 @@ async function runOcrOnCrop(){
 }
 
 const FOUND_T=1.2, MAYBE_T=0.7;
+// "Highlights" is the publisher name, never part of a title — ignore it when matching.
+const IGNORE_WORDS=/\bhighlights\b/ig;
 function handleOcrText(text){
   const clean=text.replace(/\s+/g,' ').trim();
   ocrReadEl.style.display='block';
   ocrReadEl.innerHTML = clean ? `読み取った文字: <b>${escapeHtml(clean.slice(0,120))}</b>` : '';
   if(!clean){ renderNotFound('文字をうまく読み取れませんでした。'); return; }
-  const candidates=rank(clean,6,'ocr');
+  const q=clean.replace(IGNORE_WORDS,' ').replace(/\s+/g,' ').trim() || clean;
+  const candidates=rank(q,6,'ocr');
   const best=candidates.length ? candidates[0][0] : 0;
   if(best>=FOUND_T){
     showResults(candidates, 'この本かな? タップして確認 👇');
@@ -565,7 +614,10 @@ function renderNotFound(msg, maybe){
        <div class="nf-title">この本はリストにないみたいです</div>
        <div class="nf-sub">${msg?escapeHtml(msg)+'<br>':''}タイトルをもう一度枠で囲んで撮り直すか、上の検索でも探してみてね。</div>
        <div class="nf-note">※ 最新の本の可能性があります</div>
+       ${lastImg?'<button class="nf-back" id="nfBack">📷 さっきの画像にもどる</button>':''}
      </div>`;
+  const back=document.getElementById('nfBack');
+  if(back) back.onclick=()=>{ if(lastImg) openCrop(lastImg); };
   if(maybe && maybe.length){
     let m='<div class="section-label" style="margin-top:18px">もしかして…（自信は低めです）</div>';
     maybe.forEach(([s,b])=> m+=cardHTML(b,false));
