@@ -466,27 +466,35 @@ function openCrop(img){
     if(!imgRect.w || !imgRect.h){ requestAnimationFrame(place); return; }
     const det=detectTitleTop(img);                       // bottom of red Highlights logo
     const topF = det!=null ? Math.min(det+0.015, 0.5) : 0.12;
-    setBox(imgRect.x+imgRect.w*0.06, imgRect.y+imgRect.h*topF, imgRect.w*0.88, Math.max(imgRect.h*0.10,42));
+    setBox(imgRect.x+imgRect.w*0.12, imgRect.y+imgRect.h*topF, imgRect.w*0.76, Math.max(imgRect.h*0.10,42));
     cropBox.style.visibility='visible';
   };
   cropImg.onload=()=>requestAnimationFrame(place);
   cropImg.src=img.src;
   if(cropImg.complete && cropImg.naturalWidth) requestAnimationFrame(place);  // already cached
 }
-// Find the bottom of the red "Highlights" logo (upper area) -> returns y as fraction, or null.
+// Find the bottom of the red "Highlights" logo = the TOPMOST red band only, so red in
+// the illustration below (a red jacket, a price tag) can't drag the box down.
 function detectTitleTop(img){
   try{
     const cw=160, ch=Math.max(1,Math.round(img.naturalHeight*cw/img.naturalWidth));
     const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
     const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cw,ch);
     const d=ctx.getImageData(0,0,cw,ch).data;
-    const limitY=Math.floor(ch*0.45); let maxY=-1, cnt=0;
-    for(let y=0;y<limitY;y++) for(let x=0;x<cw;x++){
+    const limitY=Math.floor(ch*0.55);
+    const rowRed=new Array(ch).fill(0);
+    for(let y=0;y<limitY;y++){ let c=0; for(let x=0;x<cw;x++){
       const i=(y*cw+x)*4, R=d[i],G=d[i+1],B=d[i+2];
-      if(R>120 && G<95 && B<95 && R-G>45 && R-B>40){ if(y>maxY)maxY=y; cnt++; }
+      if(R>120 && G<95 && B<95 && R-G>45 && R-B>40) c++; } rowRed[y]=c; }
+    const thr=3;
+    let start=-1; for(let y=0;y<limitY;y++){ if(rowRed[y]>=thr){ start=y; break; } }
+    if(start<0 || start>ch*0.32) return null;     // no red logo near the top -> use default
+    let end=start, gap=0, maxGap=Math.max(3, Math.round(ch*0.02));
+    for(let y=start;y<limitY;y++){
+      if(rowRed[y]>=thr){ end=y; gap=0; }
+      else { gap++; if(gap>maxGap) break; }
     }
-    if(cnt<15) return null;
-    return (maxY+1)/ch;
+    return (end+1)/ch;
   }catch(e){ return null; }
 }
 function relRect(){
