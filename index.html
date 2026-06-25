@@ -93,10 +93,10 @@
   .notfound .nf-title{font-size:17px; font-weight:800; color:var(--ink); margin-top:8px}
   .notfound .nf-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.7}
   .notfound .nf-note{font-size:11px; color:#b3b9b3; margin-top:10px}
-  .notfound .nf-back{margin-top:16px; padding:11px 20px; font-size:14px; font-weight:800;
+  .back-btn{display:block; margin:16px auto 4px; padding:11px 22px; font-size:14px; font-weight:800;
     color:#fff; background:linear-gradient(180deg,var(--teal),var(--teal-d)); border:none;
     border-radius:12px; cursor:pointer; box-shadow:0 3px 0 #184e69}
-  .notfound .nf-back:active{transform:translateY(2px); box-shadow:0 1px 0 #184e69}
+  .back-btn:active{transform:translateY(2px); box-shadow:0 1px 0 #184e69}
   /* ---- detail popup ---- */
   .detail{position:fixed; inset:0; background:rgba(40,30,10,.5); display:none;
     align-items:center; justify-content:center; padding:20px; z-index:50}
@@ -466,7 +466,7 @@ function openCrop(img){
     if(!imgRect.w || !imgRect.h){ requestAnimationFrame(place); return; }
     const det=detectTitleTop(img);                       // bottom of red Highlights logo
     const topF = det!=null ? Math.min(det+0.015, 0.5) : 0.12;
-    setBox(imgRect.x+imgRect.w*0.06, imgRect.y+imgRect.h*topF, imgRect.w*0.88, Math.max(imgRect.h*0.19,60));
+    setBox(imgRect.x+imgRect.w*0.06, imgRect.y+imgRect.h*topF, imgRect.w*0.88, Math.max(imgRect.h*0.10,42));
     cropBox.style.visibility='visible';
   };
   cropImg.onload=()=>requestAnimationFrame(place);
@@ -623,6 +623,16 @@ function handleOcrText(text){
   }else{
     renderNotFound(null, candidates.filter(([s])=>s>=MAYBE_T).slice(0,3));
   }
+  appendBackButton();   // after a photo, always offer a way back to the same image
+}
+// Show "back to the photo I just took" so the user can re-crop without re-shooting.
+function appendBackButton(){
+  if(!lastImg) return;
+  const btn=document.createElement('button');
+  btn.className='back-btn';
+  btn.textContent='📷 さっきの画像にもどる';
+  btn.onclick=()=>{ if(lastImg) openCrop(lastImg); };
+  resultsEl.appendChild(btn);
 }
 function renderNotFound(msg, maybe){
   resultsEl.innerHTML =
@@ -630,10 +640,7 @@ function renderNotFound(msg, maybe){
        <div class="nf-title">この本はリストにないみたいです</div>
        <div class="nf-sub">${msg?escapeHtml(msg)+'<br>':''}タイトルをもう一度枠で囲んで撮り直すか、上の検索でも探してみてね。</div>
        <div class="nf-note">※ 最新の本の可能性があります</div>
-       ${lastImg?'<button class="nf-back" id="nfBack">📷 さっきの画像にもどる</button>':''}
      </div>`;
-  const back=document.getElementById('nfBack');
-  if(back) back.onclick=()=>{ if(lastImg) openCrop(lastImg); };
   if(maybe && maybe.length){
     let m='<div class="section-label" style="margin-top:18px">もしかして…（自信は低めです）</div>';
     maybe.forEach(([s,b])=> m+=cardHTML(b,false));
