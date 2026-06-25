@@ -87,6 +87,7 @@
   .notfound .nf-emoji{font-size:42px; line-height:1}
   .notfound .nf-title{font-size:17px; font-weight:800; color:var(--ink); margin-top:8px}
   .notfound .nf-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.7}
+  .notfound .nf-note{font-size:11px; color:#b3b9b3; margin-top:10px}
   /* ---- detail popup ---- */
   .detail{position:fixed; inset:0; background:rgba(40,30,10,.5); display:none;
     align-items:center; justify-content:center; padding:20px; z-index:50}
@@ -563,6 +564,7 @@ function renderNotFound(msg, maybe){
     `<div class="notfound"><div class="nf-emoji">📕</div>
        <div class="nf-title">この本はリストにないみたいです</div>
        <div class="nf-sub">${msg?escapeHtml(msg)+'<br>':''}タイトルをもう一度枠で囲んで撮り直すか、上の検索でも探してみてね。</div>
+       <div class="nf-note">※ 最新の本の可能性があります</div>
      </div>`;
   if(maybe && maybe.length){
     let m='<div class="section-label" style="margin-top:18px">もしかして…（自信は低めです）</div>';
