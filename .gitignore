@@ -2,3 +2,4 @@ server.ps1
 lan_server.ps1
 books.json
 *.log
+.claude/

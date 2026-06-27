@@ -30,15 +30,14 @@
   .hero-deco .d3{bottom:26px; left:10px; width:38px; transform:rotate(8deg)}
   .hero-deco .d4{bottom:24px; right:8px; width:40px; transform:rotate(-10deg)}
   .hero-wave{position:absolute; left:0; right:0; bottom:-1px; width:100%; height:22px; display:block; z-index:1}
-  .brand{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:8px}
+  .brand{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:5px}
   .brand-logo{max-width:250px; width:74%; height:auto; display:block}
   .brand-fallback{display:none; align-items:center; justify-content:center;
     font-size:26px; font-weight:800; letter-spacing:.005em; color:var(--green)}
+  .clubrow{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px}
   .club{display:inline-block; color:var(--teal-d); font-weight:800; font-size:13px; letter-spacing:.18em}
-  .apptitle{position:relative; z-index:2; margin:13px 0 0; font-size:20px; font-weight:800; color:var(--ink)}
-  .goal{position:relative; z-index:2; display:inline-block; margin-top:8px;
-    color:var(--orange-d); font-weight:800; font-size:12.5px; letter-spacing:.03em}
-  .subtitle{position:relative; z-index:2; color:var(--muted); font-size:12px; margin-top:8px}
+  .goal{display:inline-block; color:var(--orange-d); font-weight:800; font-size:12.5px; letter-spacing:.03em}
+  .apptitle{position:relative; z-index:2; margin:8px 0 0; font-size:20px; font-weight:800; color:var(--ink); line-height:1.3}
 
   .wrap{max-width:560px; margin:0 auto; padding:18px 16px 8px}
 
@@ -81,6 +80,9 @@
   .card .meta{font-size:12px; color:var(--muted); margin-top:4px}
   .lvl{display:inline-block; background:#eaf5ee; color:var(--green-d); font-weight:800;
     font-size:11px; padding:2px 9px; border-radius:99px; margin-right:6px}
+  .st{display:inline-block; font-size:11px; font-weight:800; padding:2px 8px; border-radius:99px}
+  .st.done{background:#eaf5ee; color:var(--green-d)}
+  .st.reading{background:#fdeedd; color:var(--orange-d)}
   .words{flex-shrink:0; text-align:center; min-width:82px;
     background:linear-gradient(180deg,var(--teal),var(--teal-d)); color:#fff; border-radius:13px; padding:9px 6px;
     box-shadow:0 2px 0 rgba(0,0,0,.08)}
@@ -218,6 +220,15 @@
       <polyline points="20,24 32,11 44,24"/>
     </g>
   </symbol>
+  <symbol id="ico-list" viewBox="0 0 64 64">
+    <rect x="9" y="11" width="46" height="42" rx="7" fill="#4faa5a"/>
+    <rect x="15" y="19" width="11" height="7" rx="2.5" fill="#fff"/>
+    <rect x="30" y="20" width="18" height="5" rx="2.5" fill="#cfe9d6"/>
+    <rect x="15" y="30" width="11" height="7" rx="2.5" fill="#fff"/>
+    <rect x="30" y="31" width="18" height="5" rx="2.5" fill="#cfe9d6"/>
+    <rect x="15" y="41" width="11" height="7" rx="2.5" fill="#fff"/>
+    <rect x="30" y="42" width="18" height="5" rx="2.5" fill="#cfe9d6"/>
+  </symbol>
 </svg>
 
 <header class="hero">
@@ -231,26 +242,27 @@
     <img class="brand-logo" src="assets/logo.png" alt="Adventure English"
          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
     <div class="brand-fallback">Adventure English</div>
-    <span class="club">多読クラブ</span>
+    <div class="clubrow">
+      <span class="club">多読クラブ</span>
+      <span class="goal">⛵ 目指せ100万語</span>
+    </div>
   </div>
   <h1 class="apptitle">📚 ハイライツライブラリー<br>語数チェッカー</h1>
-  <div class="goal">⛵ 目指せ 100万語</div>
-  <div class="subtitle">本の表紙を撮るか、タイトルで検索しよう</div>
   <svg class="hero-wave" viewBox="0 0 1200 22" preserveAspectRatio="none">
     <path d="M0 12 Q150 0 300 12 T600 12 T900 12 T1200 12 V22 H0 Z" fill="#4faa5a"/>
   </svg>
 </header>
 
 <div class="wrap">
-  <button class="photo-btn" id="photoBtn">
-    <svg viewBox="0 0 64 64"><use href="#ico-cam"/></svg> 本の表紙を撮る
-  </button>
-  <input type="file" id="fileIn" accept="image/*" capture="environment" style="display:none">
-  <button class="upload-btn" id="uploadBtn">
-    <svg viewBox="0 0 64 64"><use href="#ico-upload"/></svg> 画像をアップロード
+  <button class="photo-btn" id="coverBtn">
+    <svg viewBox="0 0 64 64"><use href="#ico-cam"/></svg> 表紙から語数をしらべる
   </button>
   <input type="file" id="fileUp" accept="image/*" style="display:none">
-  <div class="hint">英語のタイトルがはっきり大きく写るように撮ってね 📷</div>
+  <button class="upload-btn" id="histBtn" style="border-color:var(--green); color:var(--green-d)">
+    <svg viewBox="0 0 64 64"><use href="#ico-list"/></svg> ヒストリーから語数をしらべる
+  </button>
+  <input type="file" id="fileHist" accept="image/*" style="display:none">
+  <div class="hint">画像をえらぶと、カメラ📷かアルバム🖼️が使えるよ</div>
 
   <div class="searchbox">
     <svg class="ico" viewBox="0 0 64 64"><use href="#ico-search"/></svg>
@@ -420,32 +432,48 @@ searchEl.addEventListener('input',()=>{
   },120);
 });
 
-// ---- camera + OCR ----
-const photoBtn=document.getElementById('photoBtn');
-const fileIn=document.getElementById('fileIn');
+// ---- cover image + OCR ----
 const statusEl=document.getElementById('status');
 const statusText=document.getElementById('statusText');
 const barEl=document.getElementById('bar');
 const ocrReadEl=document.getElementById('ocrRead');
 
 const fileUp=document.getElementById('fileUp');
-const uploadBtn=document.getElementById('uploadBtn');
-photoBtn.onclick=()=>fileIn.click();
-uploadBtn.onclick=()=>fileUp.click();
+const coverBtn=document.getElementById('coverBtn');
+coverBtn.onclick=()=>fileUp.click();   // browser lets the user pick camera or album
 async function handlePickedFile(file){
   if(!file) return;
   try{ openCrop(await loadImage(file)); }
   catch(err){ console.error(err); resultsEl.innerHTML='<div class="empty">画像を読み込めませんでした。もう一度試してね。</div>'; }
 }
-fileIn.onchange=()=>{ const f=fileIn.files[0]; fileIn.value=''; handlePickedFile(f); };
 fileUp.onchange=()=>{ const f=fileUp.files[0]; fileUp.value=''; handlePickedFile(f); };
 
-function loadImage(file){
+function imgFromSrc(src){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.onload=()=>res(img); img.onerror=rej;
-    img.src=(typeof file==='string')?file:URL.createObjectURL(file);
+    img.src=src;
   });
+}
+// Gallery uploads carry EXIF orientation: the <img> preview is auto-rotated, but the
+// canvas crop reads the RAW (un-rotated) pixels — so the framed box maps to the wrong
+// region and OCR reads garbage. Bake the orientation into upright pixels here so the
+// crop preview and the OCR crop use identical pixels. (Camera shots rarely hit this.)
+async function loadImage(file){
+  if(typeof file==='string') return imgFromSrc(file);
+  try{
+    const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
+    const maxDim=2200;                                   // cap huge phone photos
+    const scale=Math.min(1, maxDim/Math.max(bmp.width,bmp.height));
+    const c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*scale); c.height=Math.round(bmp.height*scale);
+    const ctx=c.getContext('2d'); ctx.imageSmoothingQuality='high';
+    ctx.drawImage(bmp,0,0,c.width,c.height);
+    bmp.close&&bmp.close();
+    return await imgFromSrc(c.toDataURL('image/jpeg',0.92));
+  }catch(e){
+    return imgFromSrc(URL.createObjectURL(file));        // fallback if createImageBitmap unsupported
+  }
 }
 
 // ---- crop screen ----
@@ -598,6 +626,7 @@ async function runOcrOnCrop(){
   statusEl.classList.add('show'); statusText.textContent='タイトルを読み取り中...'; barEl.style.width='10%';
   try{
     const worker=await getWorker();
+    await worker.setParameters({tessedit_pageseg_mode:'6'});   // single title block
     let r=await worker.recognize(makeOcrCanvas('bin'));
     let text=(r.data.text||'').trim();
     // if binarization produced little/garbage, retry with a gentler grayscale pass
@@ -656,6 +685,130 @@ function renderNotFound(msg, maybe){
     resultsEl.querySelectorAll('.card').forEach(c=>
       c.addEventListener('click',()=>openDetail(parseInt(c.dataset.id,10))));
   }
+}
+
+// ============================================================
+//  My History (reading-list screenshot) -> total word count
+// ============================================================
+const fileHist=document.getElementById('fileHist');
+const histBtn=document.getElementById('histBtn');
+histBtn.onclick=()=>fileHist.click();
+fileHist.onchange=async()=>{
+  const f=fileHist.files[0]; fileHist.value=''; if(!f) return;
+  try{ runHistoryScan(await loadImage(f)); }
+  catch(e){ console.error(e); resultsEl.innerHTML='<div class="empty">画像を読み込めませんでした。もう一度試してね。</div>'; }
+};
+
+// Scale whole screenshot to a readable width + Otsu binarize (dark text on light bg).
+function makeHistoryCanvas(img){
+  const targetW=1300;
+  const scale=Math.min(2, targetW/img.naturalWidth);
+  const w=Math.round(img.naturalWidth*scale), h=Math.round(img.naturalHeight*scale);
+  const c=document.getElementById('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d'); ctx.imageSmoothingQuality='high';
+  ctx.drawImage(img,0,0,w,h);
+  const id=ctx.getImageData(0,0,w,h), d=id.data, total=d.length/4;
+  const g=new Uint8Array(total);
+  for(let i=0,j=0;i<d.length;i+=4,j++){ g[j]=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])|0; }
+  const hist=new Array(256).fill(0); for(let j=0;j<total;j++) hist[g[j]]++;
+  let sum=0; for(let t=0;t<256;t++) sum+=t*hist[t];
+  let sumB=0,wB=0,maxVar=-1,thr=150;
+  for(let t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+    sumB+=t*hist[t]; const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>maxVar){maxVar=v;thr=t;} }
+  for(let i=0,j=0;i<d.length;i+=4,j++){ const v=g[j]<thr?0:255; d[i]=d[i+1]=d[i+2]=v; }
+  ctx.putImageData(id,0,0);
+  return c;
+}
+
+async function runHistoryScan(img){
+  lastImg=img;
+  resultsEl.innerHTML=''; ocrReadEl.style.display='none'; searchEl.value='';
+  statusEl.classList.add('show'); statusText.textContent='My History を読み取り中...'; barEl.style.width='8%';
+  try{
+    const worker=await getWorker();
+    await worker.setParameters({tessedit_pageseg_mode:'4'});   // a column of text, varied sizes
+    const r=await worker.recognize(makeHistoryCanvas(img));
+    barEl.style.width='100%';
+    statusEl.classList.remove('show');
+    parseHistory(r.data.text||'');
+  }catch(err){
+    statusEl.classList.remove('show');
+    resultsEl.innerHTML='<div class="empty">読み取りに失敗しました。明るく文字がはっきり写るように撮ってね。</div>';
+    console.error(err);
+  }
+}
+
+// Lines that are list labels / nav / dates, never a book title.
+function isHistNoise(s){
+  if(/^(series|type|level)\b/i.test(s)) return true;
+  if(/^read\b/i.test(s)) return true;
+  if(/^(my profile|my history|support|home|library|reward|download|profile|voices|leveled|phonics)\b/i.test(s)) return true;
+  if(/^\d{1,2}[:.]\d{2}\b/.test(s)) return true;            // clock e.g. 18:22
+  if(/completed|still\s*reading/i.test(s) &&
+     alnum(s.replace(/completed|still\s*reading/ig,'')).length<3) return true;
+  if(!/[a-z]{2,}/i.test(s)) return true;                    // need real letters
+  return false;
+}
+
+const HIST_T=1.3;   // require a fairly strong (hard) title match
+function parseHistory(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const entries=[];
+  for(let i=0;i<lines.length;i++){
+    const ln=lines[i];
+    if(isHistNoise(ln) || alnum(ln).length<3) continue;
+    const q=ln.replace(IGNORE_WORDS,' ').replace(/\s+/g,' ').trim();
+    if(!q) continue;
+    const cand=rank(q,1,'ocr');
+    if(!cand.length) continue;
+    const [sc,b]=cand[0];
+    if(sc<HIST_T) continue;
+    let status='';
+    for(let k=i;k<Math.min(i+6,lines.length);k++){
+      if(/complet/i.test(lines[k])){ status='completed'; break; }
+      if(/still\s*read|reading/i.test(lines[k])){ status='reading'; break; }
+    }
+    entries.push({b,status});
+  }
+  renderHistory(entries);
+}
+
+function histCardHTML(b, status){
+  const lvl=(b.l==='Phonics'||isNaN(parseInt(b.l)))?b.l:'Lv '+b.l;
+  let badge='';
+  if(status==='completed') badge=' <span class="st done">✓ よみおわり</span>';
+  else if(status==='reading') badge=' <span class="st reading">📖 よみかけ</span>';
+  return `<div class="card" data-id="${b.id}">
+    <div class="main">
+      <div class="title">${escapeHtml(b.t)}</div>
+      <div class="meta"><span class="lvl">${escapeHtml(lvl)}</span>${badge}</div>
+    </div>
+    <div class="words"><div class="n">${b.w.toLocaleString()}</div><div class="u">語 WORDS</div></div>
+  </div>`;
+}
+
+function renderHistory(entries){
+  const seen=new Set(), list=[];
+  for(const e of entries){ if(seen.has(e.b.id)) continue; seen.add(e.b.id); list.push(e); }
+  ocrReadEl.style.display='none';
+  if(!list.length){
+    renderNotFound('一覧の本をうまく読み取れませんでした。明るく、タイトルがはっきり写るように撮ってね。');
+    appendHistBackButton();
+    return;
+  }
+  let html=`<div class="section-label">ヒストリーから ${list.length}冊 見つけたよ ✍️ 手帳に書き写してね（タップで詳しく見る）</div>`;
+  list.forEach(e=> html+=histCardHTML(e.b, e.status));
+  resultsEl.innerHTML=html;
+  resultsEl.querySelectorAll('.card').forEach(c=>
+    c.addEventListener('click',()=>openDetail(parseInt(c.dataset.id,10))));
+  appendHistBackButton();
+}
+function appendHistBackButton(){
+  const btn=document.createElement('button');
+  btn.className='back-btn';
+  btn.textContent='📋 別の一覧を読み取る';
+  btn.onclick=()=>fileHist.click();
+  resultsEl.insertBefore(btn, resultsEl.firstChild);
 }
 </script>
 </body>
