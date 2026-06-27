@@ -280,7 +280,7 @@
     <b>📋 ヒストリーの見方</b><br>
     ① My&nbsp;Profile ▸ My&nbsp;History をひらく<br>
     ② 画面を撮る（スクショ）📷<br>
-    ③ 読みたい3〜5冊を枠で囲む✂️ → まとめて調べられるよ！
+    ③ 読んだ本5冊以内を枠で囲む✂️ → まとめて調べられるよ！
   </div>
 
   <div class="searchbox">
@@ -507,7 +507,7 @@ const cropTipEl=document.querySelector('.crop-tip');
 function openCrop(img, mode){
   curImg=img; lastImg=img; cropMode=mode||'cover';
   cropTipEl.textContent = cropMode==='history'
-    ? '読みたい本の情報を枠で囲んでね（表紙の絵は入れなくてOK）✂️'
+    ? '読んだ本を枠で囲んでね（5冊以内・表紙の絵は入れなくてOK）✂️'
     : 'タイトル（いちばん大きい文字）を枠で囲んでね ✂️';
   cropEl.classList.add('show');
   cropBox.style.visibility='hidden';   // hide until we can measure the rendered image
