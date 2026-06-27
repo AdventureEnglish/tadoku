@@ -769,25 +769,63 @@ function isHistNoise(s){
   return false;
 }
 
-const HIST_T=1.3;   // require a fairly strong (hard) title match
+const HIST_T=1.3;   // min score to accept a title match
+
+// Pick the best book for an OCR'd title line. When a title exists at several
+// levels (e.g. "At the Zoo"), use the Level shown in the history to break the tie.
+function matchTitle(qLine, level){
+  const q=qLine.replace(IGNORE_WORDS,' ').replace(/\s+/g,' ').trim();
+  if(alnum(q).length<2) return null;
+  const cand=rank(q,8,'ocr');
+  if(!cand.length || cand[0][0]<HIST_T) return null;
+  if(level!=null){
+    const lv=String(level).toLowerCase(), bestNorm=cand[0][1]._n;
+    const same=cand.filter(([s,b])=> b._n===bestNorm);   // identical title, different levels
+    if(same.length>1){
+      const hit=same.find(([s,b])=> String(b.l).toLowerCase()===lv);
+      if(hit) return hit[1];
+    }
+  }
+  return cand[0][1];
+}
+
+// The list is structured:  <Title> / Series Books / Type .. / Level N / Read <date> | <status>.
+// Anchor on each "Series" line and take the title from the text right before it
+// (same line and/or the line(s) above, for wrapped titles). This ignores cover-
+// thumbnail text and stray fragments that used to cause wrong/duplicate matches.
 function parseHistory(text){
   const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
   const entries=[];
   for(let i=0;i<lines.length;i++){
-    const ln=lines[i];
-    if(isHistNoise(ln) || alnum(ln).length<3) continue;
-    const q=ln.replace(IGNORE_WORDS,' ').replace(/\s+/g,' ').trim();
-    if(!q) continue;
-    const cand=rank(q,1,'ocr');
-    if(!cand.length) continue;
-    const [sc,b]=cand[0];
-    if(sc<HIST_T) continue;
-    let status='';
-    for(let k=i;k<Math.min(i+6,lines.length);k++){
-      if(/complet/i.test(lines[k])){ status='completed'; break; }
-      if(/still\s*read|reading/i.test(lines[k])){ status='reading'; break; }
+    const m=lines[i].match(/\bs[e3]r[il1]es\b/i);        // "Series" (OCR-tolerant)
+    if(!m) continue;
+    const parts=[];
+    const before=lines[i].slice(0,m.index).trim();       // title text on the Series line itself
+    if(before && !isHistNoise(before) && alnum(before).length>=2) parts.push(before);
+    for(let k=i-1;k>=0 && k>=i-4 && parts.length<3;k--){  // pull title line(s) above (wraps/cover)
+      if(isHistNoise(lines[k]) || alnum(lines[k]).length<2) break;
+      parts.unshift(lines[k]);
     }
-    entries.push({b,status});
+    if(!parts.length) continue;
+    let level=null, status='';
+    for(let k=i;k<Math.min(i+6,lines.length);k++){
+      if(level==null){ const lm=lines[k].match(/level\s*([0-9]{1,2}|phonics)/i); if(lm) level=lm[1]; }
+      if(!status){
+        if(/complet/i.test(lines[k])) status='completed';
+        else if(/still\s*read|reading/i.test(lines[k])) status='reading';
+      }
+    }
+    const b=matchTitle(parts.join(' '), level);
+    if(b) entries.push({b,status});
+  }
+  // Fallback: no "Series" anchors detected (odd crop / OCR) -> strict per-line match.
+  if(!entries.length){
+    for(const ln of lines){
+      if(isHistNoise(ln) || alnum(ln).length<3) continue;
+      const q=ln.replace(IGNORE_WORDS,' ').replace(/\s+/g,' ').trim();
+      const cand=rank(q,1,'ocr');
+      if(cand.length && cand[0][0]>=2.0) entries.push({b:cand[0][1],status:''});
+    }
   }
   renderHistory(entries);
 }
